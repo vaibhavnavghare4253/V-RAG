@@ -40,3 +40,4 @@ This document tracks implementation status, architectural milestones, and experi
   - [ ] Auth state management (JWT storage, login, register views)
   - [ ] Document upload dropzone and document management table
   - [ ] Status indicators (Pending, Processing, Indexed, Failed)
+

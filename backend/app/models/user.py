@@ -40,3 +40,4 @@ class User(Base, TimestampMixin):
     organization: Mapped["Organization"] = relationship("Organization", back_populates="users")
     uploaded_documents: Mapped[List["Document"]] = relationship("Document", back_populates="uploader")
     conversations: Mapped[List["Conversation"]] = relationship("Conversation", back_populates="user", cascade="all, delete-orphan")
+

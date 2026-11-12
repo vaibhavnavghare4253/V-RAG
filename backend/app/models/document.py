@@ -129,3 +129,4 @@ class IngestionJob(Base, TimestampMixin):
 
     # Relationships
     document: Mapped["Document"] = relationship("Document", back_populates="ingestion_jobs")
+

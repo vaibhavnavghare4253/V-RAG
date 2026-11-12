@@ -5,3 +5,4 @@ ruff>=0.4.8
 mypy>=1.10.0
 types-passlib>=1.7.7
 types-aiofiles>=23.2.0
+

@@ -38,3 +38,4 @@ class EvaluationRun(Base, TimestampMixin):
     sample_size: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     metrics: Mapped[Optional[Dict[str, Any]]] = mapped_column(JSON, nullable=True)
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+

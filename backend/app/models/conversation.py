@@ -36,3 +36,4 @@ class Message(Base, TimestampMixin):
     # Relationships
     conversation: Mapped["Conversation"] = relationship("Conversation", back_populates="messages")
     trace: Mapped[Optional["RetrievalTrace"]] = relationship("RetrievalTrace", back_populates="message", uselist=False, cascade="all, delete-orphan")
+

@@ -31,3 +31,4 @@ format:
 
 migrate:
 	cd backend && alembic upgrade head
+

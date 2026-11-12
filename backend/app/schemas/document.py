@@ -77,3 +77,4 @@ class PaginatedDocuments(BaseModel):
     page: int
     limit: int
     total_pages: int
+
