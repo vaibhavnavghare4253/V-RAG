@@ -1,11 +1,13 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from app.models.document import AssetType, DocumentStatus, JobStatus
 
 
 class IngestionJobRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     document_id: str
     status: JobStatus
@@ -17,11 +19,10 @@ class IngestionJobRead(BaseModel):
     completed_at: Optional[str] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class DocumentAssetRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     document_id: str
     page_id: Optional[str] = None
@@ -33,11 +34,10 @@ class DocumentAssetRead(BaseModel):
     asset_metadata: Optional[Dict[str, Any]] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class DocumentRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     organization_id: str
     filename: str
@@ -48,18 +48,14 @@ class DocumentRead(BaseModel):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class DocumentDetailRead(DocumentRead):
+    model_config = ConfigDict(from_attributes=True)
+
     file_hash_sha256: str
     doc_metadata: Optional[Dict[str, Any]] = None
     latest_job: Optional[IngestionJobRead] = None
     asset_counts: Optional[Dict[str, int]] = None
-
-    class Config:
-        from_attributes = True
 
 
 class DocumentUploadResponse(BaseModel):
@@ -77,4 +73,3 @@ class PaginatedDocuments(BaseModel):
     page: int
     limit: int
     total_pages: int
-

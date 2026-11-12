@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Optional
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.user import UserRole
 
@@ -15,11 +15,10 @@ class OrganizationCreate(OrganizationBase):
 
 
 class OrganizationRead(OrganizationBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True
 
 
 class UserBase(BaseModel):
@@ -36,14 +35,13 @@ class UserCreate(BaseModel):
 
 
 class UserRead(UserBase):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     organization_id: str
     is_active: bool
     created_at: datetime
     organization: Optional[OrganizationRead] = None
-
-    class Config:
-        from_attributes = True
 
 
 class Token(BaseModel):
@@ -56,4 +54,3 @@ class TokenPayload(BaseModel):
     sub: str
     org_id: Optional[str] = None
     exp: Optional[int] = None
-

@@ -1,6 +1,6 @@
 from datetime import datetime
 from typing import Any, Dict, List, Optional
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class CitationRead(BaseModel):
@@ -32,6 +32,8 @@ class QueryResponse(BaseModel):
 
 
 class MessageRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     conversation_id: str
     sender: str
@@ -41,9 +43,6 @@ class MessageRead(BaseModel):
     uncertainty_score: Optional[float] = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
-
 
 class ConversationCreate(BaseModel):
     document_id: Optional[str] = None
@@ -51,13 +50,11 @@ class ConversationCreate(BaseModel):
 
 
 class ConversationRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: str
     user_id: str
     document_id: Optional[str] = None
     title: str
     created_at: datetime
     updated_at: datetime
-
-    class Config:
-        from_attributes = True
-
