@@ -65,3 +65,33 @@ export interface PaginatedDocuments {
   total_pages: number;
 }
 
+export interface Citation {
+  document_id: string;
+  document_name: string;
+  page_number: number;
+  asset_id?: string;
+  asset_type?: string;
+  bounding_box?: Record<string, number>;
+  snippet: string;
+}
+
+export interface QueryResponse {
+  conversation_id: string;
+  message_id: string;
+  answer: string;
+  decision: string;
+  uncertainty_score: number;
+  citations: Citation[];
+  latency_ms: number;
+  diagnostics?: Record<string, unknown>;
+}
+
+export interface Conversation {
+  id: string;
+  user_id: string;
+  document_id?: string;
+  title: string;
+  created_at: string;
+  updated_at: string;
+}
+

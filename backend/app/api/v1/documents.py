@@ -1,12 +1,20 @@
 import hashlib
 import math
 from typing import Any, Optional
-from fastapi import APIRouter, File, HTTPException, Query, UploadFile, status
+from fastapi import APIRouter, BackgroundTasks, File, HTTPException, Query, UploadFile, status
 from sqlalchemy import desc, func, select
 from sqlalchemy.orm import selectinload
 
-from app.api.deps import CurrentUserDep, DbDep, StorageDep
+from app.api.deps import (
+    CurrentUserDep,
+    DbDep,
+    EmbedderDep,
+    SessionFactoryDep,
+    StorageDep,
+    VectorStoreDep,
+)
 from app.core.config import settings
+from app.ingestion.pipeline import run_text_ingestion_pipeline
 from app.models.base import generate_uuid
 from app.models.document import Document, DocumentStatus, IngestionJob, JobStatus
 from app.schemas.document import (
@@ -22,8 +30,12 @@ router = APIRouter(prefix="/documents", tags=["Documents"])
 
 @router.post("/upload", response_model=DocumentUploadResponse, status_code=status.HTTP_202_ACCEPTED)
 async def upload_document(
+    background_tasks: BackgroundTasks,
     db: DbDep,
+    session_factory: SessionFactoryDep,
     storage: StorageDep,
+    vector_store: VectorStoreDep,
+    embedder: EmbedderDep,
     current_user: CurrentUserDep,
     file: UploadFile = File(...),
 ) -> Any:
@@ -99,6 +111,16 @@ async def upload_document(
     db.add(job)
 
     await db.commit()
+
+    background_tasks.add_task(
+        run_text_ingestion_pipeline,
+        document_id=doc_id,
+        job_id=job_id,
+        session_factory=session_factory,
+        storage=storage,
+        vector_store=vector_store,
+        embedder=embedder,
+    )
 
     return DocumentUploadResponse(
         document_id=doc_id,
@@ -228,6 +250,7 @@ async def delete_document(
     document_id: str,
     db: DbDep,
     storage: StorageDep,
+    vector_store: VectorStoreDep,
     current_user: CurrentUserDep,
 ) -> None:
     """Delete a document, its stored files, and all associated extracted assets."""
@@ -241,6 +264,9 @@ async def delete_document(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Document not found or access denied.",
         )
+
+    # Delete vectors from Qdrant
+    vector_store.delete_by_document(document_id=document_id, tenant_id=current_user.organization_id)
 
     # Delete original file from storage
     if document.storage_path:

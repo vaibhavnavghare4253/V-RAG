@@ -12,6 +12,7 @@ import {
   FileText,
   FileUp,
   Loader2,
+  MessageSquare,
   RefreshCw,
   Trash2,
   UploadCloud,
@@ -173,11 +174,10 @@ export default function DashboardPage() {
             }
           }}
           onClick={() => fileInputRef.current?.click()}
-          className={`cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition ${
-            isDragOver
+          className={`cursor-pointer rounded-2xl border-2 border-dashed p-8 text-center transition ${isDragOver
               ? "border-blue-500 bg-blue-500/10"
               : "border-gray-800 bg-surface/40 hover:border-gray-700 hover:bg-surface/80"
-          }`}
+            }`}
         >
           <input
             type="file"
@@ -261,15 +261,25 @@ export default function DashboardPage() {
                     <td className="px-6 py-4 text-xs text-gray-400">
                       {new Date(doc.created_at).toLocaleDateString()}
                     </td>
-                    <td className="px-6 py-4 text-right">
-                      <button
-                        onClick={() => handleDelete(doc.id, doc.filename)}
-                        className="rounded p-1 text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition"
-                        title="Delete Document"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </td>
+                      <td className="px-6 py-4 text-right space-x-2">
+                        {doc.status === "indexed" && (
+                          <button
+                            onClick={() => router.push(`/chat?docId=${doc.id}`)}
+                            className="inline-flex items-center space-x-1 rounded px-2 py-1 text-xs font-medium text-blue-400 hover:bg-blue-500/10 transition"
+                            title="Ask Questions"
+                          >
+                            <MessageSquare className="h-3.5 w-3.5" />
+                            <span>Chat</span>
+                          </button>
+                        )}
+                        <button
+                          onClick={() => handleDelete(doc.id, doc.filename)}
+                          className="rounded p-1 text-gray-400 hover:text-red-400 hover:bg-red-500/10 transition"
+                          title="Delete Document"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </td>
                   </tr>
                 ))}
               </tbody>

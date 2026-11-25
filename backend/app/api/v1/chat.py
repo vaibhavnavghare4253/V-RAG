@@ -2,8 +2,10 @@ from typing import Any, List
 from fastapi import APIRouter, HTTPException, status
 from sqlalchemy import desc, select
 
-from app.api.deps import CurrentUserDep, DbDep
+from app.api.deps import CurrentUserDep, DbDep, RAGServiceDep
 from app.models.conversation import Conversation, Message
+from app.models.document import Document
+from app.models.trace import RetrievalTrace
 from app.schemas.chat import ConversationCreate, ConversationRead, MessageRead, QueryRequest, QueryResponse
 
 router = APIRouter(prefix="/chat", tags=["Chat & Q&A"])
@@ -16,6 +18,17 @@ async def create_conversation(
     current_user: CurrentUserDep,
 ) -> Any:
     """Create a new chat conversation thread for a document or global workspace."""
+    if conv_in.document_id:
+        stmt_doc = select(Document.id).where(
+            Document.id == conv_in.document_id,
+            Document.organization_id == current_user.organization_id,
+        )
+        if not (await db.execute(stmt_doc)).scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found or access denied.",
+            )
+
     conv = Conversation(
         user_id=current_user.id,
         document_id=conv_in.document_id,
@@ -73,12 +86,34 @@ async def list_messages(
 async def submit_query(
     query_in: QueryRequest,
     db: DbDep,
+    rag_service: RAGServiceDep,
     current_user: CurrentUserDep,
 ) -> Any:
-    """Adaptive Multimodal Query Endpoint (Foundation scaffold ready for Phase 2-6 engines)."""
+    """Execute Baseline A (Standard Text-Only RAG) query with tenant-isolated retrieval."""
+    if query_in.document_id:
+        stmt_doc = select(Document.id).where(
+            Document.id == query_in.document_id,
+            Document.organization_id == current_user.organization_id,
+        )
+        if not (await db.execute(stmt_doc)).scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Document not found or access denied.",
+            )
+
     # Create or retrieve conversation
     conv_id = query_in.conversation_id
-    if not conv_id:
+    if conv_id:
+        stmt_conv = select(Conversation).where(
+            Conversation.id == conv_id,
+            Conversation.user_id == current_user.id,
+        )
+        if not (await db.execute(stmt_conv)).scalar_one_or_none():
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Conversation not found or access denied.",
+            )
+    else:
         conv = Conversation(
             user_id=current_user.id,
             document_id=query_in.document_id,
@@ -96,31 +131,62 @@ async def submit_query(
     )
     db.add(user_msg)
 
-    # Scaffolding response until Phase 2 RAG baseline is attached
-    assistant_content = (
-        "AdaptiveDocAI Foundation Initialized. Document indexing and RAG baselines "
-        "will be attached in Phase 2."
+    # Run Baseline A Text RAG
+    rag_result = await rag_service.query(
+        query_text=query_in.query,
+        tenant_id=current_user.organization_id,
+        document_id=query_in.document_id,
+        top_k=5,
     )
+
+    citations_payload = [c.model_dump() for c in rag_result.citations]
     assistant_msg = Message(
         conversation_id=conv_id,
         sender="assistant",
-        content=assistant_content,
-        decision="ANSWER",
-        uncertainty_score=0.1,
-        citations=[],
+        content=rag_result.answer,
+        decision=rag_result.decision,
+        uncertainty_score=rag_result.uncertainty_score,
+        citations=citations_payload,
     )
     db.add(assistant_msg)
+    await db.flush()
+
+    # Persist retrieval trace for research evaluation
+    trace = RetrievalTrace(
+        message_id=assistant_msg.id,
+        intent_category="TEXT_BASELINE_A",
+        selected_modalities=["text"],
+        iteration_count=1,
+        candidate_nodes=[
+            {
+                "chunk_id": n.chunk_id,
+                "document_id": n.document_id,
+                "page_number": n.page_number,
+                "score": round(n.score, 4),
+            }
+            for n in rag_result.retrieved_nodes
+        ],
+        rerank_scores=[round(n.score, 4) for n in rag_result.retrieved_nodes],
+        uncertainty_breakdown={"naive_1_minus_top_score": rag_result.uncertainty_score},
+        latency_ms=rag_result.latency_ms,
+        total_tokens=rag_result.total_tokens,
+    )
+    db.add(trace)
     await db.commit()
     await db.refresh(assistant_msg)
 
     return QueryResponse(
         conversation_id=conv_id,
         message_id=assistant_msg.id,
-        answer=assistant_content,
-        decision="ANSWER",
-        uncertainty_score=0.1,
-        citations=[],
-        latency_ms=12,
-        diagnostics={"mode": "foundation_scaffold"},
+        answer=rag_result.answer,
+        decision=rag_result.decision,
+        uncertainty_score=rag_result.uncertainty_score,
+        citations=rag_result.citations,
+        latency_ms=rag_result.latency_ms,
+        diagnostics={
+            "mode": "baseline_a_text_rag",
+            "model": rag_result.model,
+            "retrieved_count": len(rag_result.retrieved_nodes),
+            "total_tokens": rag_result.total_tokens,
+        },
     )
-

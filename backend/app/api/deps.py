@@ -6,17 +6,36 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.core.config import settings
-from app.core.database import get_db
+from app.core.database import AsyncSessionLocal, get_db
 from app.core.security import decode_access_token
 from app.models.user import User, UserRole
+from app.retrieval.embedder import BaseEmbedder, get_embedder
 from app.schemas.user import TokenPayload
+from app.services.rag_service import BaselineTextRAGService
 from app.services.storage import StorageService, get_storage_service
+from app.services.vector_store import VectorStoreService, get_vector_store
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl=f"{settings.API_V1_STR}/auth/login")
 
+
+def get_db_session_factory():
+    return AsyncSessionLocal
+
+
+def get_rag_service(
+    embedder: Annotated[BaseEmbedder, Depends(get_embedder)],
+    vector_store: Annotated[VectorStoreService, Depends(get_vector_store)],
+) -> BaselineTextRAGService:
+    return BaselineTextRAGService(embedder=embedder, vector_store=vector_store)
+
+
 DbDep = Annotated[AsyncSession, Depends(get_db)]
+SessionFactoryDep = Annotated[object, Depends(get_db_session_factory)]
 TokenDep = Annotated[str, Depends(oauth2_scheme)]
 StorageDep = Annotated[StorageService, Depends(get_storage_service)]
+EmbedderDep = Annotated[BaseEmbedder, Depends(get_embedder)]
+VectorStoreDep = Annotated[VectorStoreService, Depends(get_vector_store)]
+RAGServiceDep = Annotated[BaselineTextRAGService, Depends(get_rag_service)]
 
 
 async def get_current_user(

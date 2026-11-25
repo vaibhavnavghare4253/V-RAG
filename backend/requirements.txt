@@ -25,6 +25,9 @@ boto3>=1.34.0
 # Vector DB & Search Client
 qdrant-client>=1.9.0
 
+# PDF Processing
+pymupdf>=1.24.0
+
 # Redis & Background Tasks
 redis>=5.0.0
 celery>=5.4.0

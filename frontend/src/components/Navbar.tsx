@@ -46,6 +46,14 @@ export function Navbar() {
               >
                 Documents
               </Link>
+              <Link
+                href="/chat"
+                className={`transition-colors hover:text-white ${
+                  pathname === "/chat" ? "text-blue-400" : "text-gray-400"
+                }`}
+              >
+                Q&A Chat
+              </Link>
               <div className="flex items-center space-x-3 border-l border-gray-800 pl-6">
                 <div className="flex items-center space-x-2 rounded-full border border-gray-800 bg-surface px-3 py-1 text-xs text-gray-300">
                   <UserIcon className="h-3.5 w-3.5 text-blue-400" />

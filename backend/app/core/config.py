@@ -36,6 +36,8 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "sqlite+aiosqlite:///./adaptivedoc.db"
     
     # Qdrant Vector DB
+    QDRANT_MODE: str = "local"  # options: local, memory, remote
+    QDRANT_LOCAL_PATH: str = "./data/qdrant"
     QDRANT_HOST: str = "localhost"
     QDRANT_PORT: int = 6333
     QDRANT_COLLECTION: str = "adaptive_doc_nodes"
@@ -61,13 +63,16 @@ class Settings(BaseSettings):
     MAX_UPLOAD_SIZE_BYTES: int = 50 * 1024 * 1024
 
     # AI Model Providers & Models
-    DEFAULT_LLM_PROVIDER: str = "openai"
+    DEFAULT_LLM_PROVIDER: str = "mock"  # options: openai, gemini, ollama, mock
+    DEFAULT_LLM_MODEL: str = "gpt-4o-mini"
     OPENAI_API_KEY: Optional[str] = None
     GEMINI_API_KEY: Optional[str] = None
     ANTHROPIC_API_KEY: Optional[str] = None
     OLLAMA_BASE_URL: str = "http://localhost:11434"
 
-    DENSE_EMBEDDING_MODEL: str = "BAAI/bge-large-en-v1.5"
+    EMBEDDING_PROVIDER: str = "local_hash"  # options: sentence_transformers, openai, gemini, local_hash
+    DENSE_EMBEDDING_MODEL: str = "BAAI/bge-small-en-v1.5"
+    EMBEDDING_DIMENSION: int = 384
     RERANKER_MODEL: str = "BAAI/bge-reranker-large"
     NLI_VERIFIER_MODEL: str = "cross-encoder/nli-deberta-v3-small"
 

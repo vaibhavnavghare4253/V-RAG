@@ -5,15 +5,17 @@ from typing import AsyncGenerator
 import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
+from qdrant_client import QdrantClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
-from app.api.deps import get_db, get_storage_service
+from app.api.deps import get_db, get_db_session_factory, get_storage_service
 from app.core.config import settings
 from app.core.database import Base
 from app.core.security import create_access_token
 from app.main import app
 from app.models.user import Organization, User, UserRole
 from app.services.storage import LocalStorageService, StorageService
+from app.services.vector_store import VectorStoreService, get_vector_store
 
 # Use in-memory SQLite for high-speed, isolated async testing
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -59,17 +61,34 @@ def mock_storage(temp_storage_dir) -> StorageService:
     return LocalStorageService(base_dir=temp_storage_dir)
 
 
+@pytest.fixture(scope="function")
+def mock_vector_store() -> VectorStoreService:
+    return VectorStoreService(client=QdrantClient(":memory:"), collection_name="test_doc_nodes")
+
+
 @pytest_asyncio.fixture(scope="function")
-async def client(test_db: AsyncSession, mock_storage: StorageService) -> AsyncGenerator[AsyncClient, None]:
-    """Test client overriding database and storage dependencies."""
+async def client(
+    test_db: AsyncSession,
+    mock_storage: StorageService,
+    mock_vector_store: VectorStoreService,
+) -> AsyncGenerator[AsyncClient, None]:
+    """Test client overriding database, storage, and vector store dependencies."""
     async def override_get_db():
         yield test_db
 
     def override_storage():
         return mock_storage
 
+    def override_session_factory():
+        return TestingSessionLocal
+
+    def override_vector_store():
+        return mock_vector_store
+
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[get_db_session_factory] = override_session_factory
     app.dependency_overrides[get_storage_service] = override_storage
+    app.dependency_overrides[get_vector_store] = override_vector_store
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://testserver") as ac:
